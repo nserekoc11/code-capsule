@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+from tkinter import dialog
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QFrame,
     QListWidget, QLabel, QHBoxLayout, QDialog, QLineEdit,
@@ -514,6 +515,17 @@ class CodeCapsuleUI(QWidget):
         hr.addWidget(lbl)
         hr.addStretch()
 
+        new_btn = QPushButton("+ New Project")
+        new_btn.setFixedWidth(90)
+        new_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b; padding: 6px 10px;
+                border-radius: 6px; font-size: 11px; text-align: center;
+            }
+            QPushButton:hover { background-color: #334155; }
+        """)
+        new_btn.clicked.connect(self.open_new_project_dialog)
+
         refresh = QPushButton("↻  Refresh")
         refresh.setFixedWidth(90)
         refresh.setStyleSheet("""
@@ -527,6 +539,7 @@ class CodeCapsuleUI(QWidget):
             self.project_list.clear(),
             self.project_list.addItems(self.get_projects())
         ))
+        hr.addWidget(new_btn)
         hr.addWidget(refresh)
         layout.addLayout(hr)
 
@@ -534,6 +547,28 @@ class CodeCapsuleUI(QWidget):
         self.project_list.addItems(self.get_projects())
         self.project_list.itemDoubleClicked.connect(self.open_selected_project)
         layout.addWidget(self.project_list)
+
+    def open_new_project_dialog(self):
+        dialog = NewProjectDialog(self)
+
+        if dialog.exec():
+            self.create_project(
+                dialog.name_input.text(),
+                dialog.type_combo.currentText()
+            )
+
+    def create_project(self, name, project_type):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        projects_dir = self.prefs.value(
+            "paths/projects",
+            os.path.join(script_dir, "projects")
+        )
+        project_path = os.path.join(projects_dir, name)
+        os.makedirs(project_path, exist_ok=True)
+
+        # Refresh the project list after creating a new project
+        self.project_list.clear()
+        self.project_list.addItems(self.get_projects())
 
     def open_settings(self):
         SettingsWindow(self).exec()
@@ -589,16 +624,41 @@ class CodeCapsuleUI(QWidget):
             print(f"Git Bash error: {e}")
 
     def open_cmd(self):
+        script_dir   = os.path.dirname(os.path.abspath(__file__))
+        projects_dir = self.prefs.value("paths/projects",
+                                         os.path.join(script_dir, "projects"))
+        os.makedirs(projects_dir, exist_ok=True)
+
         try:
-            subprocess.Popen("cmd")
+            subprocess.Popen(
+                ["cmd.exe"],
+                cwd=projects_dir,
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
         except Exception as e:
-            print(f"CMD error: {e}")
+            QMessageBox.critical(self, "Terminal error", f"CMD error: {e}")
 
     def open_powershell(self):
+        script_dir   = os.path.dirname(os.path.abspath(__file__))
+        projects_dir = self.prefs.value("paths/projects",
+                                         os.path.join(script_dir, "projects"))
+        os.makedirs(projects_dir, exist_ok=True)
+
         try:
-            subprocess.Popen("powershell")
-        except Exception as e:
-            print(f"PowerShell error: {e}")
+            subprocess.Popen(
+                ["powershell.exe"],
+                cwd=projects_dir,
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+        except Exception:
+            try:
+                subprocess.Popen(
+                    ["pwsh.exe"],
+                    cwd=projects_dir,
+                    creationflags=subprocess.CREATE_NEW_CONSOLE
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Terminal error", f"PowerShell error: {e}")
 
     def open_selected_project(self, item):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
@@ -613,7 +673,36 @@ class CodeCapsuleUI(QWidget):
             print(f"Open project error: {e}")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+#Create Project Dialog
+class NewProjectDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("New Project")
+
+        layout = QVBoxLayout()
+
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Project Name")
+
+        self.type_combo = QComboBox()
+        self.type_combo.addItems([
+            "Python",
+            "Flask",
+            "Empty Project"
+        ])
+
+        create_btn = QPushButton("Create")
+
+        create_btn.clicked.connect(self.accept)
+
+        layout.addWidget(self.name_input)
+        layout.addWidget(self.type_combo)
+        layout.addWidget(create_btn)
+
+        self.setLayout(layout)
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = CodeCapsuleUI()

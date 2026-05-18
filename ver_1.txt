@@ -1,0 +1,28 @@
+CODE CAPSULE
+
+Portable “Dev USB”
+
+An app that turns a USB into a portable dev environment:
+
+Python
+Git
+VS Code
+configs
+extensions
+SSH keys
+portable terminal
+
+Plug into any PC and continue working.
+
+
+--------------------------------
+|        Code Capsule         |
+--------------------------------
+| [ Open VS Code ]            |
+| [ Open Terminal ]           |
+| [ Open Projects Folder ]    |
+|                              |
+| Last Project: mybot         |
+|                              |
+| [ Restore Workspace ]       |
+--------------------------------

@@ -220,10 +220,8 @@ class SettingsWindow(QDialog):
 
     def _advanced_tab(self):
         tab, form = self._scrollable_form()
-        self.updates_chk = self._checkbox(form, "Check for updates on startup",
-                                           "advanced/check_updates", False)
-        self.debug_chk   = self._checkbox(form, "Enable debug logging",
-                                           "advanced/debug_logging",  False)
+        self.updates_chk = self._checkbox(form, "Check for updates on startup","advanced/check_updates", False)
+        self.debug_chk   = self._checkbox(form, "Enable debug logging","advanced/debug_logging",  False)
 
         reset_btn = QPushButton("Reset all settings to defaults")
         reset_btn.setStyleSheet(
@@ -558,17 +556,124 @@ class CodeCapsuleUI(QWidget):
             )
 
     def create_project(self, name, project_type):
+
+        if not name.strip():
+            QMessageBox.warning(
+                self,
+                "Invalid Name",
+                "Project name cannot be empty."
+            )
+            return
+
         script_dir = os.path.dirname(os.path.abspath(__file__))
+
         projects_dir = self.prefs.value(
             "paths/projects",
             os.path.join(script_dir, "projects")
         )
-        project_path = os.path.join(projects_dir, name)
-        os.makedirs(project_path, exist_ok=True)
 
-        # Refresh the project list after creating a new project
+        project_path = os.path.join(projects_dir, name)
+    
+        if os.path.exists(project_path):
+            QMessageBox.warning(
+                self,
+                "Project Exists",
+                "A project with this name already exists."
+            )
+            return
+    
+        os.makedirs(project_path)
+    
+        # ── README ─────────────────────
+        with open(
+            os.path.join(project_path, "README.md"),
+            "w",
+            encoding="utf-8"
+        ) as f:
+    
+            f.write(f"# {name}\n")
+    
+        # ── Project Templates ──────────
+        if project_type == "Python":
+        
+            with open(
+                os.path.join(project_path, "main.py"),
+                "w",
+                encoding="utf-8"
+            ) as f:
+    
+                f.write(
+                    "def main():\n"
+                    "    print('Hello from Code Capsule')\n\n"
+                    "if __name__ == '__main__':\n"
+                    "    main()\n"
+                )
+    
+        elif project_type == "Flask":
+        
+            with open(
+                os.path.join(project_path, "app.py"),
+                "w",
+                encoding="utf-8"
+            ) as f:
+    
+                f.write(
+                    "from flask import Flask\n\n"
+                    "app = Flask(__name__)\n\n"
+                    "@app.route('/')\n"
+                    "def home():\n"
+                    "    return 'Hello Flask'\n\n"
+                    "if __name__ == '__main__':\n"
+                    "    app.run(debug=True)\n"
+                )
+    
+            os.makedirs(
+                os.path.join(project_path, "templates"),
+                exist_ok=True
+            )
+    
+            os.makedirs(
+                os.path.join(project_path, "static"),
+                exist_ok=True
+            )
+    
+        # ── Git Init ───────────────────
+        try:
+            self.setup_environment_cc()
+    
+            subprocess.run(
+                ["git", "init"],
+                cwd=project_path,
+                capture_output=True,
+                text=True
+            )
+    
+        except Exception as e:
+            print("Git init error:", e)
+    
+        # ── Refresh UI ─────────────────
         self.project_list.clear()
         self.project_list.addItems(self.get_projects())
+    
+        # ── Open VS Code ───────────────
+        try:
+            subprocess.Popen([
+                self._resolve(
+                    "paths/vscode",
+                    "apps/vscode/Code.exe"
+                ),
+                project_path
+            ])
+    
+        except Exception as e:
+            print("VS Code launch error:", e)
+    
+        QMessageBox.information(
+            self,
+            "Project Created",
+            f"{name} created successfully."
+        )
+
 
     def open_settings(self):
         SettingsWindow(self).exec()
@@ -592,8 +697,7 @@ class CodeCapsuleUI(QWidget):
 
     def get_projects(self):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects",
-                                         os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         os.makedirs(projects_dir, exist_ok=True)
         return [f for f in os.listdir(projects_dir)
                 if os.path.isdir(os.path.join(projects_dir, f))]
@@ -605,18 +709,15 @@ class CodeCapsuleUI(QWidget):
 
     def open_vscode_cc(self):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects",
-                                         os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         try:
-            subprocess.Popen([self._resolve("paths/vscode", "apps/vscode/Code.exe"),
-                              projects_dir])
+            subprocess.Popen([self._resolve("paths/vscode", "apps/vscode/Code.exe"), projects_dir])
         except Exception as e:
             print(f"VS Code error: {e}")
 
     def open_git_bash(self):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects",
-                                         os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         bash = os.path.join(script_dir, "apps", "git", "git-bash.exe")
         try:
             subprocess.Popen([bash], cwd=projects_dir)
@@ -625,8 +726,7 @@ class CodeCapsuleUI(QWidget):
 
     def open_cmd(self):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects",
-                                         os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         os.makedirs(projects_dir, exist_ok=True)
 
         try:
@@ -640,8 +740,7 @@ class CodeCapsuleUI(QWidget):
 
     def open_powershell(self):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects",
-                                         os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         os.makedirs(projects_dir, exist_ok=True)
 
         try:
@@ -662,8 +761,7 @@ class CodeCapsuleUI(QWidget):
 
     def open_selected_project(self, item):
         script_dir   = os.path.dirname(os.path.abspath(__file__))
-        projects_dir = self.prefs.value("paths/projects", 
-                                        os.path.join(script_dir, "projects"))
+        projects_dir = self.prefs.value("paths/projects", os.path.join(script_dir, "projects"))
         try:
             subprocess.Popen([
                 self._resolve("paths/vscode", "apps/vscode/Code.exe"),

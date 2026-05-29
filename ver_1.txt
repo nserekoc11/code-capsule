@@ -27,5 +27,3 @@ Plug into any PC and continue working.
 | [ Restore Workspace ]       |
 --------------------------------
 
-
-C:\Users\nsere\Desktop\vsc files\code cap>C:\Users\nsere\AppData\Local\Programs\Python\Python313 -m PyInstaller --noconsole --distpath="exe_files" --name="Capsule"  "c:\Users\nsere\Desktop\vsc files\code cap\launcher.py"
